@@ -10,7 +10,7 @@ class Nod {
 protected:
 	///Membrii Clasei
 	T info;
-	Nod *st, *dr;
+	Nod *st, *dr, *tata;
 	/// Clasa trebuie sa fie prietena cu clasa ABC(ABC are elementele de tip Nod)
 	friend class ArboreBinarCautare<T>;
 	///Constructori
