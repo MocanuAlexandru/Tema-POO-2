@@ -8,16 +8,74 @@ class ArboreBinarCautare : public Arbore {
 	//Date membre
 protected:
 	Nod<T> * rad;
-	///Constructori
 public:
+	///Iterator
+	class iterator {
+	protected:
+		Nod<T>* it;
+		Nod<T>* ElementMinimDinSubarbore(Nod<T>* R) {
+			if (R->st) return ElementMinimDinSubarbore(R->st);
+			return R;
+		}
+		Nod<T>* NextValue(Nod<T>* R,Nod<T>* prev) {
+			if (!R) return nullptr;
+			if (R->st == prev) return R;
+			if (R->dr && R->dr!=prev) return ElementMinimDinSubarbore(R->dr);
+			return NextValue(R->tata,R);
+		}
+	public:
+		iterator(Nod<T>* R) :it(R) {}
+		iterator(const iterator& other) {
+			it = other.it;
+		}
+		~iterator() {
+			it = nullptr;
+		}
+		iterator& operator=(const iterator& other) {
+			it = other.it;
+		}
+		iterator operator++() {
+			it = NextValue(it, it);
+			return *this;
+		}
+		iterator operator++(int) {
+			iterator o = *this;
+			it = NextValue(it, it);
+			return o;
+		}
+		bool operator==(const iterator& other) const {
+			return it == other.it;
+		}
+		bool operator!=(const iterator& other) const {
+			return !(*this==other);
+		}
+		Nod<T>& operator*() const {
+			return *it;
+		}
+		Nod<T>* operator->() const {
+			return it;
+		}
+	};
+	///Functii ajutatoare iterator
+	ArboreBinarCautare::iterator begin() {
+		ArboreBinarCautare::iterator o(ElementMinimDinSubarbore(rad));
+		return o;
+	}
+	ArboreBinarCautare::iterator end() {
+		ArboreBinarCautare::iterator o(nullptr);
+		return o;
+	}
+	///Constructori
 	ArboreBinarCautare() : Arbore() { rad = nullptr; }
 	ArboreBinarCautare(const ArboreBinarCautare& other) {
 		rad = CopiazaArbore(other.rad);
+		if (rad) rad->tata = nullptr;
 		nr_noduri = other.nr_noduri;
 	}
 	ArboreBinarCautare& operator=(const ArboreBinarCautare& other) {
 		StergeArbore(rad);
 		rad = CopiazaArbore(other.rad);
+		if (rad) rad->tata = nullptr;
 		nr_noduri = other.nr_noduri;
 		return *this;
 	};
@@ -110,6 +168,7 @@ public:
 			in >> val;
 			bool ok;
 			rad = AdaugaNod(rad, val, ok);
+			if (rad) rad->tata = nullptr;
 		}
 		return in;
 	}
@@ -125,7 +184,9 @@ protected:
 			Nod<T>* p = new Nod<T>;
 			p->info = R->info;
 			p->st = CopiazaArbore(R->st);
+			if (p->st) p->st->tata = R;
 			p->dr = CopiazaArbore(R->dr);
+			if (p->dr) p->dr->tata = R;
 			return p;
 		}
 		return nullptr;
@@ -143,6 +204,7 @@ protected:
 		{
 			bool ok;
 			rad = AdaugaNod(rad, R->info, ok);
+			if (rad) rad->tata = nullptr;
 			nr_noduri += ok;
 			AdaugaArbore(R->st);
 			AdaugaArbore(R->dr);
@@ -150,18 +212,25 @@ protected:
 	}
 	Nod<T>* AdaugaNod(Nod<T>* R,T val,bool& ok) {
 		if (!R) {
-			R = new Nod(val);
+			R = new Nod<T>(val);
 			return R;
 		}
 		if (R->info == val) ok = 0;
-		else if (R->info < val) R->dr = AdaugaNod(R->dr, val, ok);
-		else R->st = AdaugaNod(R->st, val, ok);
+		else if (R->info < val) { 
+			R->dr = AdaugaNod(R->dr, val, ok);
+			if (R->dr) R->dr->tata = R;
+		}
+		else {
+			R->st = AdaugaNod(R->st, val, ok);
+			if (R->st) R->st->tata = R;
+		}
 		return R;
 	}
 	void StergeElementeArbore(Nod<T>* R) {
 		if (R) {
 			bool ok;
 			rad = StergeElement(rad, R->info, ok);
+			if (rad) rad->tata = nullptr;
 			nr_noduri -= ok;
 			StergeElementeArbore(R->st);
 			StergeElementeArbore(R->dr);
@@ -171,31 +240,43 @@ protected:
 		if (!R) {
 			ok = 0; return nullptr;
 		}
-		if (R->info < val) R->dr = StergeElement(R->dr, val, ok);
-		else if (val < R->info) R->st = StergeElement(R->st, val, ok);
+		if (R->info < val) {
+			R->dr = StergeElement(R->dr, val, ok);
+			if (R->dr) R->dr->tata = R;
+		}
+
+		else if (val < R->info) {
+			R->st = StergeElement(R->st, val, ok);
+			if (R->st) R->st->tata = R;
+		}
+
 		else {
 			if (R->st == nullptr) {
-				Nod* p = R->dr;
+				Nod<T>* p = R->dr;
 				delete R;
 				return p;
 			}
 			if (R->dr == nullptr) {
-				Nod*p = R->st;
+				Nod<T>*p = R->st;
 				delete R;
 				return p;
 			}
-			Nod* p = R->st;
+			Nod<T>* p = R->st;
 			while (p->dr) p = p->dr;
 			R->info = p->info;
 			ok = 1;
 			R->st = StergeElement(R->st, p->info, ok);
+			if (R->st) R->st->tata = R;
 		}
 		return R;
 	}
 	void AdaugaIntersectie(Nod<T>* p, Nod<T>* q) {
 		if (p) {
 			bool ok;
-			if (CautaNod(q, p->info)) rad = AdaugaNod(rad, p->info, ok);
+			if (CautaNod(q, p->info)) {
+				rad = AdaugaNod(rad, p->info, ok);
+				if (rad) rad->tata = nullptr;
+			}
 			AdaugaIntersectie(p->st, q);
 			AdaugaIntersectie(p->dr, q);
 		}
@@ -230,6 +311,10 @@ protected:
 			out << *R << ' ';
 			afisareSRD(out, R->dr);
 		}
+	}
+	Nod<T>* ElementMinimDinSubarbore(Nod<T>* R) {
+		if (R->st) return ElementMinimDinSubarbore(R->st);
+		return R;
 	}
 };
 
